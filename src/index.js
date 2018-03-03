@@ -12,6 +12,8 @@ const typeDefs = `
     company : Company
 
     todos: [Todo]
+    albums: [Album]
+    posts: [Post]
   }
 
   type Address {
@@ -38,6 +40,7 @@ const typeDefs = `
     id: ID!
     title: String!
     body: String!
+    comments: [Comment!]
   }
 
   type Comment {
@@ -52,6 +55,7 @@ const typeDefs = `
     userId: ID!
     id: ID!
     title: String!
+    photos: [Photo!]
   }
 
   type Photo {
@@ -91,6 +95,30 @@ const resolvers = {
       const url = id ? `${endpoint}/users/${id}` : `${endpoint}/users`
       const res = await fetch(url);
       const users = await res.json()
+      if (id) {
+        for(var value of ["posts", "albums", "todos"]) {
+          const res = await fetch(`${ endpoint }/${ value }?userId=${ id }`);
+          users[value] = await res.json();
+        }
+
+        // Albums
+        const albums = [];
+        for(var album of users.albums) {
+          const res = await fetch(`${ endpoint }/photos?albumId=${ album.id }`);
+          album.photos = await res.json();
+          albums.push(album);
+        }
+        users.albums = albums;
+
+        // Posts
+        const posts = [];
+        for(var post of users.posts) {
+          const res = await fetch(`${ endpoint }/comments?postId=${ post.id }`);
+          post.comments = await res.json();
+          posts.push(post);
+        }
+        users.posts = posts;
+      }
       return id ? [users] : users;
     },
     posts: async (_, { userId }) => {
